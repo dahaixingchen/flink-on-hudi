@@ -1,4 +1,4 @@
-package com.fei
+package com.fei.sql
 
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.Table
@@ -7,13 +7,15 @@ import org.apache.hudi.common.model.HoodieTableType
 import org.apache.hudi.configuration.FlinkOptions
 import org.apache.hudi.util.HoodiePipeline
 
+import java.util.Properties
+
 /**
  * @Description:
  * @ClassName: FlinkHudiReadWrite
  * @Author chengfei
  * @DateTime 2023/4/28 15:46
  * */
-object FlinkHudiReadWrite {
+object FlinkHudiWrite {
   def main(args: Array[String]): Unit = {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val tableEnv: StreamTableEnvironment = StreamTableEnvironment.create(env)
@@ -42,18 +44,35 @@ object FlinkHudiReadWrite {
       """.stripMargin)
     val table: Table = tableEnv.from("kafkaInputTable")
 
-    HoodiePipeline.builder("t1")
-      .column("id VARCHAR(20)")
-      .column("name VARCHAR(10)")
-      .column("age INT")
-      .column("ts VARCHAR(20)")
-      .column("loc VARCHAR(20)")
-      .partition("loc")
-      .pk("id")
-      .option(FlinkOptions.PATH,"/flink_hudi_data")
-      .option(FlinkOptions.TABLE_TYPE, HoodieTableType.COPY_ON_WRITE.name)
-      .option(FlinkOptions.PATH,"/flink_hudi_data")
-      .option(FlinkOptions.PATH,"/flink_hudi_data")
+    tableEnv.executeSql(
+      """
+        |CREATE TABLE t1(
+        |  id VARCHAR(20) PRIMARY KEY NOT ENFORCED,--默认主键列为uuid,这里可以后面跟上“PRIMARY KEY NOT ENFORCED”指定为主键列
+        |  name VARCHAR(10),
+        |  age INT,
+        |  ts VARCHAR(20),
+        |  loc VARCHAR(20)
+        |)
+        |PARTITIONED BY (loc)
+        |WITH (
+        |  'connector' = 'hudi',
+        |  'path' = '/flink_hudi_data',
+        |  'write.tasks' = '1', -- default is 4 ,required more resource
+        |  'compaction.tasks' = '1', -- default is 10 ,required more resource
+        |  'table.type' = 'COPY_ON_WRITE' -- this creates a MERGE_ON_READ table, by default is COPY_ON_WRITE
+        |)
+      """.stripMargin)
+
+    //把数据写入hidi中
+    tableEnv.executeSql(
+      s"""
+         | insert into t1 select id,name,age,ts,loc from ${table}
+    """.stripMargin
+    )
+
+
+
+
 
   }
 }
