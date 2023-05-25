@@ -39,7 +39,7 @@ public class FlinkHudiWriteToHive {
                 , new CustomKafkaDeserSchema()
                 , consumerProps
         ));
-        DataStream<RowData> map = dStream.map(p -> {
+        DataStream<RowData> dStremMor = dStream.map(p -> {
 
             GenericRowData genericRowData = new GenericRowData(5);
             genericRowData.setField(0, StringData.fromString(p.getUuid()));
@@ -49,11 +49,9 @@ public class FlinkHudiWriteToHive {
             genericRowData.setField(4, StringData.fromString(p.getPt()));
             return genericRowData;
         });
-        map.print();
+        dStremMor.print();
 
-
-
-        HoodiePipeline.Builder builderMor = HoodiePipeline.builder("flink_hudi_mor_stream")
+        HoodiePipeline.Builder builderMor = HoodiePipeline.builder("flink_hudi_mor_stream_2511")
                 .column("uuid VARCHAR(20)")
                 .column("name VARCHAR(10)")
                 .column("age VARCHAR(10)")
@@ -75,18 +73,26 @@ public class FlinkHudiWriteToHive {
                 .option(FlinkOptions.READ_AS_STREAMING.key(), true)
                 .option(FlinkOptions.HIVE_SYNC_METASTORE_URIS.key(), "thrift://cdh-7253:9083")
                 .option(FlinkOptions.HIVE_SYNC_JDBC_URL.key(), "jdbc:hive2://cdh-7253:10000")
-                .option(FlinkOptions.HIVE_SYNC_TABLE.key(), "flink_hudi_mor_stream")
+                .option(FlinkOptions.HIVE_SYNC_TABLE.key(), "flink_hudi_mor_stream_2511")
                 .option(FlinkOptions.HIVE_SYNC_DB.key(), "hudi_db")
                 .option(FlinkOptions.HIVE_SYNC_USERNAME.key(), "ykas_aq")
                 .option(FlinkOptions.HIVE_SYNC_PASSWORD.key(), "XwHdDvzwLRrdKvM3")
                 .option(FlinkOptions.READ_STREAMING_CHECK_INTERVAL.key(), 4);
 
-        builderMor.sink(map, false);
+        builderMor.sink(dStremMor, false);
 
-        HoodiePipeline.Builder builderCow = HoodiePipeline.builder("flink_hudi_stream")
+
+        //cow表实现表结构跟mor表不一样，同时能写入数据
+        DataStream<RowData> dStreamCow = dStream.map(p -> {
+
+            GenericRowData genericRowData = new GenericRowData(3);
+            genericRowData.setField(0, StringData.fromString(p.getUuid()));
+            genericRowData.setField(1, StringData.fromString(String.valueOf(p.getDt())));
+            genericRowData.setField(2, StringData.fromString(p.getPt()));
+            return genericRowData;
+        });
+        HoodiePipeline.Builder builderCow = HoodiePipeline.builder("flink_hudi_cow_stream_2511")
                 .column("uuid VARCHAR(20)")
-                .column("name VARCHAR(10)")
-                .column("age VARCHAR(10)")
                 .column("dt VARCHAR(20)")
                 .column("pt VARCHAR(20)")
                 .partition("pt")
@@ -101,13 +107,13 @@ public class FlinkHudiWriteToHive {
                 .option(FlinkOptions.READ_AS_STREAMING.key(), true)
                 .option(FlinkOptions.HIVE_SYNC_METASTORE_URIS.key(), "thrift://cdh-7253:9083")
                 .option(FlinkOptions.HIVE_SYNC_JDBC_URL.key(), "jdbc:hive2://cdh-7253:10000")
-                .option(FlinkOptions.HIVE_SYNC_TABLE.key(), "flink_hudi_stream")
+                .option(FlinkOptions.HIVE_SYNC_TABLE.key(), "flink_hudi_cow_stream_2511")
                 .option(FlinkOptions.HIVE_SYNC_DB.key(), "hudi_db")
                 .option(FlinkOptions.HIVE_SYNC_USERNAME.key(), "ykas_aq")
                 .option(FlinkOptions.HIVE_SYNC_PASSWORD.key(), "XwHdDvzwLRrdKvM3")
                 .option(FlinkOptions.READ_STREAMING_CHECK_INTERVAL.key(), 4);
 
-        builderCow.sink(map, false);
+        builderCow.sink(dStreamCow, false);
 
         env.execute();
     }
