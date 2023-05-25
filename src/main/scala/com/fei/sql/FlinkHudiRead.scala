@@ -25,15 +25,16 @@ object FlinkHudiRead {
         | create table t1(
         |  uuid varchar,
         |  name varchar,
-        |  age int,
+        |  age varchar,
         |  dt varchar,
         |  pt varchar
         | ) with (
         |  'connector' = 'hudi',
-        |  'path' = '/user/chengfei/hudi-t2',
+        |  'path' = '/user/chengfei/hudi-mergeOnRead2',
         |  'write.tasks' = '1', -- default is 4 ,required more resource
         |  'compaction.tasks' = '1', -- default is 10 ,required more resource
-        |  'table.type' = 'COPY_ON_WRITE' -- this creates a MERGE_ON_READ table, by default is COPY_ON_WRITE
+//        |  'table.type' = 'COPY_ON_WRITE' -- this creates a MERGE_ON_READ table, by default is COPY_ON_WRITE
+        |  'table.type' = 'MERGE_ON_READ' -- this creates a MERGE_ON_READ table, by default is COPY_ON_WRITE
         | )
       """.stripMargin)
 
