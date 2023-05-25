@@ -51,6 +51,38 @@ public class FlinkHudiWriteToHive {
         });
         map.print();
 
+
+
+        HoodiePipeline.Builder builderMor = HoodiePipeline.builder("flink_hudi_mor_stream")
+                .column("uuid VARCHAR(20)")
+                .column("name VARCHAR(10)")
+                .column("age VARCHAR(10)")
+                .column("dt VARCHAR(20)")
+                .column("pt VARCHAR(20)")
+                .partition("pt")
+                .pk("uuid")
+                .option(FlinkOptions.PATH.key(), "/user/chengfei/hudi-flink-mor-stream")
+//                .option(FlinkOptions.TABLE_TYPE.key(), HoodieTableType.COPY_ON_WRITE.name())
+                .option(FlinkOptions.TABLE_TYPE.key(), HoodieTableType.MERGE_ON_READ.name())
+                .option(FlinkOptions.COMPACTION_TASKS.key(), 1)
+                .option(FlinkOptions.WRITE_TASKS.key(), 1)
+                .option("hoodie.compact.inline",true)  //开启是否一个事务就开启压缩
+                .option("hoodie.cleaner.commits.retained",1)  //保留多少个历史的parquet文件
+                .option("hoodie.compact.inline.max.delta.commits",1) // 提交多少次合并log文件大宋新的parquet文件中
+                .option(FlinkOptions.PRECOMBINE_FIELD.key(), "dt") //当主键冲突的时候以什么字段的最大值为标准
+                //自动开启创建表
+                .option(FlinkOptions.HIVE_SYNC_ENABLED.key(), true)
+                .option(FlinkOptions.READ_AS_STREAMING.key(), true)
+                .option(FlinkOptions.HIVE_SYNC_METASTORE_URIS.key(), "thrift://cdh-7253:9083")
+                .option(FlinkOptions.HIVE_SYNC_JDBC_URL.key(), "jdbc:hive2://cdh-7253:10000")
+                .option(FlinkOptions.HIVE_SYNC_TABLE.key(), "flink_hudi_mor_stream")
+                .option(FlinkOptions.HIVE_SYNC_DB.key(), "hudi_db")
+                .option(FlinkOptions.HIVE_SYNC_USERNAME.key(), "ykas_aq")
+                .option(FlinkOptions.HIVE_SYNC_PASSWORD.key(), "XwHdDvzwLRrdKvM3")
+                .option(FlinkOptions.READ_STREAMING_CHECK_INTERVAL.key(), 4);
+
+        builderMor.sink(map, false);
+
         HoodiePipeline.Builder builderCow = HoodiePipeline.builder("flink_hudi_stream")
                 .column("uuid VARCHAR(20)")
                 .column("name VARCHAR(10)")
@@ -76,37 +108,6 @@ public class FlinkHudiWriteToHive {
                 .option(FlinkOptions.READ_STREAMING_CHECK_INTERVAL.key(), 4);
 
         builderCow.sink(map, false);
-
-
-        HoodiePipeline.Builder builderMor = HoodiePipeline.builder("flink_hudi_mor_stream")
-                .column("uuid VARCHAR(20)")
-                .column("name VARCHAR(10)")
-                .column("age VARCHAR(10)")
-                .column("dt VARCHAR(20)")
-                .column("pt VARCHAR(20)")
-                .partition("pt")
-                .pk("uuid")
-                .option(FlinkOptions.PATH.key(), "/user/chengfei/hudi-flink-mor-stream")
-//                .option(FlinkOptions.TABLE_TYPE.key(), HoodieTableType.COPY_ON_WRITE.name())
-                .option(FlinkOptions.TABLE_TYPE.key(), HoodieTableType.MERGE_ON_READ.name())
-                .option(FlinkOptions.COMPACTION_TASKS.key(), 1)
-                .option(FlinkOptions.WRITE_TASKS.key(), 1)
-                .option("hoodie.compact.inline",true) //开启是否一个事务就开启压缩
-                .option("hoodie.cleaner.commits.retained",1)  //保留多少个历史的parquet文件
-                .option("hoodie.compact.inline.max.delta.commits",1) // 提交多少次合并log文件大宋新的parquet文件中
-                .option(FlinkOptions.PRECOMBINE_FIELD.key(), "dt") //当主键冲突的时候以什么字段的最大值为标准
-                //自动开启创建表
-                .option(FlinkOptions.HIVE_SYNC_ENABLED.key(), true)
-                .option(FlinkOptions.READ_AS_STREAMING.key(), true)
-                .option(FlinkOptions.HIVE_SYNC_METASTORE_URIS.key(), "thrift://cdh-7253:9083")
-                .option(FlinkOptions.HIVE_SYNC_JDBC_URL.key(), "jdbc:hive2://cdh-7253:10000")
-                .option(FlinkOptions.HIVE_SYNC_TABLE.key(), "flink_hudi_mor_stream")
-                .option(FlinkOptions.HIVE_SYNC_DB.key(), "hudi_db")
-                .option(FlinkOptions.HIVE_SYNC_USERNAME.key(), "ykas_aq")
-                .option(FlinkOptions.HIVE_SYNC_PASSWORD.key(), "XwHdDvzwLRrdKvM3")
-                .option(FlinkOptions.READ_STREAMING_CHECK_INTERVAL.key(), 4);
-
-        builderMor.sink(map, false);
 
         env.execute();
     }
