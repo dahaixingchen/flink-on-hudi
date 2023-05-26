@@ -30,7 +30,7 @@ object FlinkHudiRead {
         |  pt varchar
         | ) with (
         |  'connector' = 'hudi',
-        |  'path' = '/user/chengfei/hudi-mergeOnRead2',
+        |  'path' = '/user/chengfei/hudi-flink-mor-stream2611',
         |  'write.tasks' = '1', -- default is 4 ,required more resource
         |  'compaction.tasks' = '1', -- default is 10 ,required more resource
 //        |  'table.type' = 'COPY_ON_WRITE' -- this creates a MERGE_ON_READ table, by default is COPY_ON_WRITE
